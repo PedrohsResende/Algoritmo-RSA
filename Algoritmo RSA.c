@@ -4,18 +4,37 @@
 #include <math.h>
 #include <time.h>
 
+
 // Função que calcula a potência de um número
-int mod_pow(int base, int exponent, int modulus)
-{
-    int result = 1;
-    while (exponent > 0) {
-        if (exponent & 1) {
-            result = (result * base) % modulus;
+int mod_exp(int base, int expoente, int m) {
+    int resultado = 1;
+    base = base % m;
+
+    while (expoente > 0) {
+        if (expoente % 2 == 1) {
+            resultado = (resultado * base) % m;
         }
-        exponent = exponent >> 1;
-        base = (base * base) % modulus;
+        expoente = expoente / 2;
+        base = (base * base) % m;
     }
-    return result;
+
+    return resultado;
+}
+
+// Função que calcula a potência de um número
+long long int mod_pow(long long int base, int expoente, int m) {
+    long long int resultado = 1;
+    base = base % m;
+
+    while (expoente > 0) {
+        if (expoente % 2 == 1) {
+            resultado = (resultado * base) % m;
+        }
+        expoente = expoente / 2;
+        base = (base * base) % m;
+    }
+
+    return resultado;
 }
 
 //calcula o inverso multiplicativo de a mod m
@@ -74,12 +93,20 @@ int rand_prime() {
 void g_chave() 
 {
     int p, q, n, e, d;
-    printf("Digite dois números primos p e q: ");
+    printf("Digite dois números primos p e q: \n");
     scanf("%d", &p);
     scanf("%d", &q);
+    while (!is_prime(p) || !is_prime(q)) {
+        printf("Erro: p ou q não é primo.\n");
+        printf("Digite dois números primos p e q: \n");
+        scanf("%d", &p);
+        scanf("%d", &q);
+    }
     n = p * q;
+    //a função totiente de Euler (p-1)(q-1)
     int phi = (p - 1) * (q - 1);
-    printf("Digite um expoente e relativamente primo a (p-1)(q-1): ");
+    printf("phi = %d\n", phi);
+    printf("Digite um expoente e relativamente primo a phi = (p-1)(q-1): ");
     scanf("%d", &e);
     while (gcd(e, phi) != 1) {
         printf("Erro: o expoente não é relativamente primo a (p-1)(q-1).\n");
@@ -93,28 +120,19 @@ void g_chave()
     printf("Chave pública gerada com sucesso.\n");
 }
 
-void encriptar() {
-    int p, q, n, e;
-    printf("Digite dois números primos p e q: ");
-    scanf("%d", &p);
-    scanf("%d", &q);
-    n = p * q;
-    int phi = (p - 1) * (q - 1);
-    printf("Digite um expoente e relativamente primo a (p-1)(q-1): ");
+void encriptar() 
+{
+    int n, e;
+    printf("Digite os valores de n e e: \n");
+    scanf("%d", &n);
     scanf("%d", &e);
-    while (gcd(e, phi) != 1) {
-        printf("Erro: o expoente não é relativamente primo a (p-1)(q-1).\n");
-        printf("Digite outro valor para e: ");
-        scanf("%d", &e);
-    }
-
     // Obter a mensagem a ser encriptada
-    char mensagem[100];
+    char mensagem[1000];
     printf("Digite a mensagem a ser encriptada: ");
     scanf(" %[^\n]", mensagem);
 
     // Converter a mensagem para um array de inteiros
-    int mensagem_int[100];
+    long long int mensagem_int[1000];
     int i;
     for (i = 0; mensagem[i] != '\0'; i++) {
         if (mensagem[i] == ' ') {
@@ -123,9 +141,8 @@ void encriptar() {
             mensagem_int[i] = mensagem[i] - 'A' + 2;
         }
     }
-
     // Encriptar a mensagem
-    int mensagem_encriptada[100];
+    long long int mensagem_encriptada[1000];
     for (i = 0; mensagem[i] != '\0'; i++) {
         mensagem_encriptada[i] = mod_pow(mensagem_int[i], e, n);
     }
@@ -141,10 +158,74 @@ void encriptar() {
 }
 
 
-int desencriptar()
-{
+void desencriptar() {
+    // Abrir o arquivo com a mensagem encriptada
+    FILE *arquivo_entrada = fopen("mensagem_encriptada.txt", "r");
+    if (arquivo_entrada == NULL) {
+        printf("Erro ao abrir o arquivo mensagem_encriptada.txt\n");
+        return;
+    }
 
+    // Ler a mensagem encriptada do arquivo
+    int mensagem_encriptada[1000];
+    int tamanho_mensagem = 0;
+    int valor;
+    while (fscanf(arquivo_entrada, "%d", &valor) == 1) {
+        mensagem_encriptada[tamanho_mensagem] = valor;
+        tamanho_mensagem++;
+    }
+    fclose(arquivo_entrada);
+
+    // Obter a chave privada do usuário
+    int p, q, n, e, d;
+    printf("Digite dois números primos p e q: \n");
+    scanf("%d", &p);
+    scanf("%d", &q);
+    while (!is_prime(p) || !is_prime(q)) {
+        printf("Erro: p ou q não é primo.\n");
+        printf("Digite dois números primos p e q: \n");
+        scanf("%d", &p);
+        scanf("%d", &q);
+    }
+    n = p * q;
+    //a função totiente de Euler (p-1)(q-1)
+    int phi = (p - 1) * (q - 1);
+    printf("phi = %d\n", phi);
+    printf("Digite um expoente e relativamente primo a phi = (p-1)(q-1): ");
+    scanf("%d", &e);
+    while (gcd(e, phi) != 1) {
+        printf("Erro: o expoente não é relativamente primo a (p-1)(q-1).\n");
+        printf("Digite outro valor para e: ");
+        scanf("%d", &e);
+    }
+    d = mod_inverse(e, phi);
+    // Desencriptar a mensagem
+    int mensagem_desencriptada[1000];
+    int i;
+    for (i = 0; i < tamanho_mensagem; i++) {
+        mensagem_desencriptada[i] = mod_pow(mensagem_encriptada[i], d, n);
+    }
+
+    // Converter a mensagem desencriptada para uma string
+    char mensagem[1000];
+    for (i = 0; i < tamanho_mensagem; i++) {
+        if (mensagem_desencriptada[i] == 28) {
+            mensagem[i] = ' ';
+        } else {
+            mensagem[i] = mensagem_desencriptada[i] + 'A' - 2;
+        }
+    }
+    mensagem[i] = '\0';
+
+    // Salvar a mensagem desencriptada em um arquivo
+    FILE *arquivo_saida = fopen("mensagem_desencriptada.txt", "w");
+    fprintf(arquivo_saida, "%s", mensagem);
+    fclose(arquivo_saida);
+
+    printf("Mensagem desencriptada e salva em mensagem_desencriptada.txt\n");
 }
+
+
 
 //Solicite que o usuário escolha entre 3 opções: 1 - Gerar chave pública, 2 - Encriptar, 3 - Desencriptar.
 
@@ -154,7 +235,7 @@ int main()
     printf("Digite 1 - Gerar chave pública\n");
     printf("Digite 2 - Encriptar\n");
     printf("Digite 3 - Desencriptar\n");
-    scanf("%d\n", &entrada);
+    scanf("%d", &entrada);
     if (entrada == 1)
         {
             g_chave();
